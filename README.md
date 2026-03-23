@@ -77,3 +77,16 @@ Used scrollTop + rowHeight calculation.
 
 ## Lighthouse
 (Add screenshot here)
+
+# Project Tracker UI
+
+A React + TypeScript project management app with **Kanban, List, and Timeline views**.  
+Uses **Zustand** for state management, **TailwindCSS** for styling, and supports **drag & drop**, **virtual scrolling**, **filters**, and **URL sync** with 500+ tasks.
+
+---
+
+## Setup
+
+```bash
+npm install
+npm start
