@@ -3,59 +3,92 @@ import { useTaskStore } from "../../context/TaskStore";
 export default function TimelineView() {
   const tasks = useTaskStore((state) => state.tasks);
 
-  const startOfMonth = new Date(2026, 2, 1); // March
+  const startOfMonth = new Date(2026, 2, 1); // March start
   const dayWidth = 20;
 
-  // ✅ Today calculation (OUTSIDE map)
+  // ✅ Today calculation
   const today = new Date();
   const todayIndex =
     (today.getTime() - startOfMonth.getTime()) / 86400000;
 
+  // ✅ Empty state
+  if (tasks.length === 0) {
+    return <div className="p-4 text-gray-400">No tasks to display</div>;
+  }
+
   return (
-    <div className="p-4 overflow-x-auto">
-      <div className="relative border h-[400px] w-[1200px]">
+    <div className="p-4">
+      {/* ✅ Horizontal Scroll */}
+      <div className="overflow-x-auto">
 
-        {/* ✅ Today line */}
+        {/* ✅ Timeline Container */}
         <div
-          className="absolute top-0 bottom-0 w-[2px] bg-red-500"
-          style={{ left: todayIndex * dayWidth }}
-        />
+          style={{ width: "2000px", position: "relative" }}
+          className="bg-white"
+        >
 
-        {/* ✅ Tasks */}
-        {tasks.map((task, index) => {
-          const start = new Date(task.startDate || task.dueDate);
-          const end = new Date(task.dueDate);
-
-          const startOffset =
-            (start.getTime() - startOfMonth.getTime()) / 86400000;
-
-          const days =
-            (end.getTime() - start.getTime()) / 86400000 + 1;
-
-          const left = startOffset * dayWidth;
-          const width = days * dayWidth;
-
-        if (tasks.length === 0) {
-  return <div className="p-4 text-gray-400">No tasks to display</div>;
-}
-
-          return (
+          {/* 🔥 GRID LINES (NEW) */}
+          {Array.from({ length: 31 }).map((_, i) => (
             <div
-              key={task.id}
-              className="absolute h-6 bg-blue-400 rounded"
+              key={i}
+              className="absolute top-0 bottom-0 border-l border-gray-200"
               style={{
-                top: index * 30, // ✅ proper stacking (no overlap)
-                left: left,
-                width: width,
+                left: `${i * dayWidth}px`,
               }}
-            >
-              <span className="text-xs text-white px-1">
-                {task.title}
-              </span>
-            </div>
-          );
-        })}
+            />
+          ))}
 
+          {/* 🔥 TODAY LINE */}
+          <div
+            className="absolute top-0 w-[2px] bg-red-500 h-full z-10"
+            style={{ left: `${todayIndex * dayWidth}px` }}
+          />
+
+          {/* 🔥 TASK ROWS */}
+          {tasks.map((task, index) => {
+            const startDate = new Date(task.startDate || task.dueDate);
+            const endDate = new Date(task.dueDate);
+
+            // ✅ CALCULATIONS
+            const startOffset =
+              ((startDate.getTime() - startOfMonth.getTime()) /
+                86400000) *
+              dayWidth;
+
+            const duration =
+              ((endDate.getTime() - startDate.getTime()) /
+                86400000 +
+                1) *
+              dayWidth;
+
+            return (
+              <div
+                key={task.id}
+                className="relative h-10 border-b border-gray-200"
+              >
+                {/* 🔥 TASK BAR WITH TOOLTIP */}
+                <div
+                  className="
+                    absolute bg-blue-500 h-6 rounded flex items-center
+                    hover:bg-blue-600 transition-all duration-200
+                    shadow-sm hover:shadow-md
+                  "
+                  style={{
+                    left: `${startOffset}px`,
+                    width: `${duration}px`,
+                    top: "5px",
+                  }}
+                  title={`${task.title} (Due: ${task.dueDate})`} // 🔥 TOOLTIP
+                >
+                  <span className="text-xs text-white px-2 truncate">
+                    {task.title}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+
+        </div>
       </div>
     </div>
   );

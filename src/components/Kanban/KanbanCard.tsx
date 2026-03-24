@@ -1,43 +1,47 @@
 import { Task } from "../../data/seedData";
+import React from "react";
 
 interface Props {
   task: Task;
-  draggingId: string | null;
-  setDraggingId: (id: string | null) => void;
+  draggingTask: Task | null;
+  setDraggingTask: (task: Task | null) => void;
   setPosition: (pos: { x: number; y: number }) => void;
   usersOnTask: any[];
 }
 
-export default function KanbanCard({
+function KanbanCard({
   task,
-  draggingId,
-  setDraggingId,
+  draggingTask,
+  setDraggingTask,
   setPosition,
   usersOnTask,
 }: Props) {
-  
-  const isDragging = draggingId === task.id;
+  const isDragging = draggingTask?.id === task.id;
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    setDraggingId(task.id);
+  const handlePointerDown = () => {
+    setDraggingTask(task);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+    if (draggingTask?.id !== task.id) return;
     setPosition({ x: e.clientX, y: e.clientY });
   };
 
   const handlePointerUp = () => {
-    setDraggingId(null);
+    setDraggingTask(null);
   };
 
   return (
     <div
-      id={`card-${task.id}`}  // ✅ IMPORTANT for dynamic placeholder height
+      id={`card-${task.id}`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      className="p-3 mb-2 bg-white rounded-lg cursor-grab active:cursor-grabbing transition-all duration-200"
+      className="
+        p-3 mb-2 bg-white rounded-xl cursor-grab active:cursor-grabbing
+        transition-all duration-200 ease-in-out
+        hover:shadow-xl hover:-translate-y-1
+      "
       style={{
         opacity: isDragging ? 0.6 : 1,
         boxShadow: isDragging
@@ -45,6 +49,7 @@ export default function KanbanCard({
           : "0 2px 6px rgba(0,0,0,0.1)",
         transform: isDragging ? "scale(1.03)" : "scale(1)",
       }}
+      title={`${task.title} (${task.dueDate})`} // 🔥 tooltip polish
     >
       {/* Title + Priority */}
       <div className="flex justify-between items-center">
@@ -65,12 +70,12 @@ export default function KanbanCard({
         </span>
       </div>
 
-      {/* ✅ Avatar Stack */}
+      {/* Avatar Stack */}
       <div className="flex items-center mt-2">
         {usersOnTask.slice(0, 2).map((u) => (
           <div
             key={u.id}
-            className="w-6 h-6 text-xs bg-blue-500 text-white rounded-full flex items-center justify-center -ml-1 border-2 border-white transition-all"
+            className="w-6 h-6 text-xs bg-blue-500 text-white rounded-full flex items-center justify-center -ml-1 border-2 border-white"
           >
             {u.name}
           </div>
@@ -99,3 +104,5 @@ export default function KanbanCard({
     </div>
   );
 }
+
+export default React.memo(KanbanCard);
