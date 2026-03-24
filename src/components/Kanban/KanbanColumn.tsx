@@ -21,11 +21,16 @@ function KanbanColumn({
       onPointerEnter={() => setIsOver(true)}
       onPointerLeave={() => setIsOver(false)}
       onPointerUp={(e) => {
-        if (draggingId) {
-          onDrop(e, status);
-        }
-        setIsOver(false);
-      }}
+  if (draggingId) {
+    onDrop(e, status);
+  }
+  setIsOver(false);
+}}
+onPointerMove={(e) => {
+  if (draggingId) {
+    setPosition({ x: e.clientX, y: e.clientY });
+  }
+}}
     >
       <h3 className="font-bold mb-2">
         {title} ({tasks.length})
@@ -37,28 +42,35 @@ function KanbanColumn({
   </div>
 )}
 
-      {tasks.map((task: any) => {
-        const usersOnTask =
-          activeUsers?.filter((u: any) => u.taskId === task.id) || [];
+    {tasks.map((task: any) => {
+  const usersOnTask =
+    activeUsers?.filter((u: any) => u.taskId === task.id) || [];
 
-        return (
-          <div key={task.id}>
-            {/* ✅ Placeholder */}
-            {draggingId === task.id && (
-              <div className="h-[80px] bg-gray-300 mb-2 rounded" />
-            )}
+  return (
+    <div key={task.id}>
+      
+      {/* ✅ Dynamic Placeholder */}
+      {draggingId === task.id && (
+        <div
+          className="bg-gray-300 mb-2 rounded"
+          style={{
+            height: document.getElementById(`card-${task.id}`)?.offsetHeight || 80,
+          }}
+        />
+      )}
 
-            {/* ✅ Card with users */}
-            <KanbanCard
-              task={task}
-              draggingId={draggingId}
-              setDraggingId={setDraggingId}
-              setPosition={setPosition}
-              usersOnTask={usersOnTask}
-            />
-          </div>
-        );
-      })}
+      {/* ✅ Card */}
+      <KanbanCard
+        task={task}
+        draggingId={draggingId}
+        setDraggingId={setDraggingId}
+        setPosition={setPosition}
+        usersOnTask={usersOnTask}
+      />
+    </div>
+  );
+})}
+        
     </div>
   );
 }
