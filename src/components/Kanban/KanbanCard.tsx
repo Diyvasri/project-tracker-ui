@@ -37,19 +37,16 @@ function KanbanCard({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      className="
-        p-3 mb-2 bg-white rounded-xl cursor-grab active:cursor-grabbing
+      className={`
+        p-3 mb-2 bg-white rounded-xl 
+        cursor-grab active:cursor-grabbing
         transition-all duration-200 ease-in-out
+
         hover:shadow-xl hover:-translate-y-1
-      "
-      style={{
-        opacity: isDragging ? 0.6 : 1,
-        boxShadow: isDragging
-          ? "0 10px 25px rgba(0,0,0,0.25)"
-          : "0 2px 6px rgba(0,0,0,0.1)",
-        transform: isDragging ? "scale(1.03)" : "scale(1)",
-      }}
-      title={`${task.title} (${task.dueDate})`} // 🔥 tooltip polish
+
+        ${isDragging ? "scale-105 opacity-80 shadow-2xl" : ""}
+      `}
+      title={`${task.title} (${task.dueDate})`}
     >
       {/* Title + Priority */}
       <div className="flex justify-between items-center">
