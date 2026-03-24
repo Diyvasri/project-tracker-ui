@@ -1,47 +1,31 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTaskStore } from "../../context/TaskStore";
 import KanbanColumn from "./KanbanColumn";
-import { Status, Task } from "../../data/seedData";
-import { useMemo } from "react";
+import { Status } from "../../data/seedData";
+import { DndContext } from "@dnd-kit/core";
 
 const columns: Status[] = ["To Do", "In Progress", "In Review", "Done"];
 
-const statusMap: Record<Status, Status> = {
-  "To Do": "To Do",
-  "In Progress": "In Progress",
-  "In Review": "In Review",
-  "Done": "Done",
-};
-
 export default function KanbanBoard() {
   const tasks = useTaskStore((state) => state.tasks);
-  const memoTasks = useMemo(() => tasks, [tasks]);
   const updateTaskStatus = useTaskStore((state) => state.updateTaskStatus);
 
-  // ✅ DRAG STATE
-  const [draggingTask, setDraggingTask] = useState<Task | null>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const navigate = useNavigate();
+  const location = useLocation();
 
-
-
-  const [activeUsers, setActiveUsers] = useState<any[]>([
-    { id: 1, name: "U1", taskId: null },
-    { id: 2, name: "U2", taskId: null },
-    { id: 3, name: "U3", taskId: null },
-  ]);
-
-  // ✅ FILTER STATE (ARRAY FORMAT)
   const [filters, setFilters] = useState({
     status: [] as string[],
     priority: [] as string[],
     assignee: [] as string[],
   });
 
-  const navigate = useNavigate();
-  const location = useLocation();
+  /* ✅ AUTO SAVE TO LOCAL STORAGE (VERY IMPORTANT) */
+  useEffect(() => {
+    localStorage.setItem("tasks", JSON.stringify(tasks));
+  }, [tasks]);
 
-  // 🔥 STEP 1: READ FROM URL (ON LOAD)
+  /* 🔥 READ FILTER FROM URL */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
 
@@ -52,7 +36,7 @@ export default function KanbanBoard() {
     });
   }, [location.search]);
 
-  // 🔥 STEP 2: UPDATE URL WHEN FILTER CHANGES
+  /* 🔥 UPDATE URL */
   useEffect(() => {
     const params = new URLSearchParams();
 
@@ -71,102 +55,76 @@ export default function KanbanBoard() {
     navigate(`?${params.toString()}`, { replace: true });
   }, [filters, navigate]);
 
-  // ✅ DROP
-  const handleDrop = (status: Status) => {
-    if (!draggingTask) return;
+  /* 🔥 FILTER LOGIC */
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const statusMatch = filters.status.length
+        ? filters.status.includes(task.status)
+        : true;
 
-    updateTaskStatus(draggingTask.id, status);
-    setDraggingTask(null);
-  
+      const priorityMatch = filters.priority.length
+        ? filters.priority.includes(task.priority)
+        : true;
+
+      const assigneeMatch = filters.assignee.length
+        ? filters.assignee.includes(task.assignee)
+        : true;
+
+      return statusMatch && priorityMatch && assigneeMatch;
+    });
+  }, [tasks, filters]);
+
+  /* 🔥 DRAG END */
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    updateTaskStatus(active.id, over.id as Status);
   };
 
-  // ✅ COLLAB SIMULATION
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveUsers((prev) =>
-        prev.map((user) => {
-          const randomTask = tasks[Math.floor(Math.random() * tasks.length)];
-          return { ...user, taskId: randomTask?.id };
-        })
-      );
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [tasks]);
-
-  // ✅ FILTER LOGIC
-  const filteredTasks = useMemo(() => {
-  return memoTasks.filter((task) => {
-    const statusMatch = filters.status.length
-      ? filters.status.includes(task.status)
-      : true;
-
-    const priorityMatch = filters.priority.length
-      ? filters.priority.includes(task.priority)
-      : true;
-
-    const assigneeMatch = filters.assignee.length
-      ? filters.assignee.includes(task.assignee)
-      : true;
-
-    return statusMatch && priorityMatch && assigneeMatch;
-  });
-}, [memoTasks, filters]);
-
   return (
-    <div className="relative">
+    <div className="p-4">
 
-      {/* 🔹 FILTER UI */}
+      {/* FILTER */}
       <div className="flex gap-4 mb-4">
         <select
           multiple
           onChange={(e) =>
             setFilters({
               ...filters,
-              status: Array.from(e.target.selectedOptions, (o) => o.value),
+              status: Array.from(
+                e.target.selectedOptions,
+                (o) => o.value
+              ),
             })
           }
-          className="border p-2"
+          className="border p-2 rounded"
         >
-          <option>To Do</option>
-          <option>In Progress</option>
-          <option>In Review</option>
-          <option>Done</option>
+          {columns.map((col) => (
+            <option key={col}>{col}</option>
+          ))}
         </select>
       </div>
 
-      {/* 🔹 COLUMNS */}
-      <div className="grid grid-cols-4 gap-4 mt-6">
-        {columns.map((col) => (
-          <KanbanColumn
-            key={col}
-            title={col}
-            status={statusMap[col]}
-            tasks={filteredTasks.filter((t) => t.status === statusMap[col])}
-            draggingTask={draggingTask}
-            setDraggingTask={setDraggingTask}
-            setPosition={setPosition}
-            onDrop={handleDrop}
-            activeUsers={activeUsers}
-          />
-        ))}
-      </div>
+      {/* 🔥 RESPONSIVE WRAPPER */}
+      <DndContext onDragEnd={handleDragEnd}>
+        <div className="w-full overflow-x-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 min-w-[800px] mt-6">
 
-      {/* 🔥 FLOATING CARD */}
-      {draggingTask && (
-        <div
-          className="fixed pointer-events-none bg-white p-3 rounded shadow-lg z-50"
-          style={{
-            top: position.y,
-            left: position.x,
-            transform: "translate(-50%, -50%)",
-            opacity: 0.8,
-          }}
-        >
-          <strong>{draggingTask.title}</strong>
-          <div>{draggingTask.assignee}</div>
+            {columns.map((col) => (
+              <KanbanColumn
+                key={col}
+                title={col}
+                status={col}
+                tasks={filteredTasks.filter(
+                  (t) => t.status === col
+                )}
+              />
+            ))}
+
+          </div>
         </div>
-      )}
+      </DndContext>
     </div>
   );
 }

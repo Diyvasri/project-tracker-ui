@@ -17,9 +17,12 @@ function KanbanColumn({
   const isOver = draggingTask !== null;
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3 }}
       className={`
-        p-3 rounded-xl h-[500px] overflow-auto scroll-smooth
+        p-3 rounded-xl h-[500px] overflow-y-auto min-w-[250px]
         transition-all duration-200 ease-in-out
         ${
           isOver
@@ -29,7 +32,6 @@ function KanbanColumn({
       `}
       onPointerUp={() => {
         if (draggingTask) {
-          // 🔥 SNAP EFFECT
           setTimeout(() => {
             onDrop(status, hoverIndex);
             setHoverIndex(null);
@@ -43,19 +45,19 @@ function KanbanColumn({
       }}
       onPointerLeave={() => setHoverIndex(null)}
     >
-      {/* 🔹 Title */}
+      {/* TITLE */}
       <h3 className="font-semibold text-gray-700 mb-3">
         {title} ({tasks.length})
       </h3>
 
-      {/* 🔹 Empty State */}
+      {/* 🔥 IMPROVED EMPTY STATE */}
       {tasks.length === 0 && (
         <div className="text-center text-gray-400 py-10 text-sm">
-          🚀 No tasks here. Start by adding one!
+          📭 No tasks yet — drag or create one!
         </div>
       )}
 
-      {/* 🔹 Tasks */}
+      {/* TASKS */}
       {tasks.map((task: any, index: number) => {
         const usersOnTask =
           activeUsers?.filter((u: any) => u.taskId === task.id) || [];
@@ -68,11 +70,11 @@ function KanbanColumn({
         return (
           <motion.div
             key={task.id}
-            layout // 🔥 MAIN MAGIC (smooth reorder)
+            layout
             transition={{ duration: 0.25 }}
             onPointerEnter={() => setHoverIndex(index)}
           >
-            {/* 🔥 PRECISE DROP LINE */}
+            {/* DROP LINE */}
             {hoverIndex === index && draggingTask && !isDragging && (
               <motion.div
                 layout
@@ -80,7 +82,7 @@ function KanbanColumn({
               />
             )}
 
-            {/* 🔥 PLACEHOLDER */}
+            {/* PLACEHOLDER */}
             {isDragging && cardHeight && (
               <motion.div
                 layout
@@ -89,26 +91,34 @@ function KanbanColumn({
               />
             )}
 
-            {/* 🔹 Card */}
-            <KanbanCard
-              task={task}
-              draggingTask={draggingTask}
-              setDraggingTask={setDraggingTask}
-              setPosition={setPosition}
-              usersOnTask={usersOnTask}
-            />
+            {/* CARD */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <KanbanCard
+                task={task}
+                draggingTask={draggingTask}
+                setDraggingTask={setDraggingTask}
+                setPosition={setPosition}
+                usersOnTask={usersOnTask}
+              />
+            </motion.div>
           </motion.div>
         );
       })}
 
-      {/* 🔥 DROP AT END */}
+      {/* DROP END */}
       {hoverIndex === tasks.length && draggingTask && (
         <motion.div
           layout
           className="h-1 bg-blue-500 rounded my-1"
         />
       )}
-    </div>
+    </motion.div>
   );
 }
 

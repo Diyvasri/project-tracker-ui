@@ -38,15 +38,15 @@ function KanbanCard({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       className={`
-        p-3 mb-2 bg-white rounded-xl 
+        bg-white rounded-xl shadow-sm hover:shadow-md p-3
         cursor-grab active:cursor-grabbing
-        transition-all duration-200 ease-in-out
+        transition duration-200 ease-in-out
 
-        hover:shadow-xl hover:-translate-y-1
+        hover:-translate-y-1
 
         ${isDragging ? "scale-105 opacity-80 shadow-2xl" : ""}
       `}
-      title={`${task.title} (${task.dueDate})`}
+      title={`${task.title} (${new Date(task.dueDate).toLocaleDateString()})`}
     >
       {/* Title + Priority */}
       <div className="flex justify-between items-center">
@@ -96,7 +96,7 @@ function KanbanCard({
             : "text-gray-500"
         }`}
       >
-        {task.dueDate}
+        {new Date(task.dueDate).toLocaleDateString()}
       </div>
     </div>
   );

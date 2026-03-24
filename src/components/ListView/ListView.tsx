@@ -1,187 +1,228 @@
-import { useTaskStore } from "../../context/TaskStore";
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { Task, Status } from "../../data/seedData";
 
-export default function ListView() {
-  const tasks = useTaskStore((state) => state.tasks);
-  const updateTaskStatus = useTaskStore((state) => state.updateTaskStatus);
+interface Props {
+  tasks: Task[];
+  onStatusChange: (id: string, status: Status) => void;
+}
 
-  const rowHeight = 60;
-  const visibleCount = 10;
+type SortKey = "title" | "priority" | "dueDate";
+type Direction = "asc" | "desc";
 
+const priorityOrder: Record<string, number> = {
+  Critical: 4,
+  High: 3,
+  Medium: 2,
+  Low: 1,
+};
+
+function ListView({ tasks, onStatusChange }: Props) {
+  const [sortKey, setSortKey] = useState<SortKey>("title");
+  const [direction, setDirection] = useState<Direction>("asc");
   const [scrollTop, setScrollTop] = useState(0);
-const onScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setScrollTop(e.currentTarget.scrollTop);
+
+  // ✅ NEW: SEARCH STATE
+  const [search, setSearch] = useState("");
+
+  // 🔥 SORT LOGIC
+  const sortedTasks = useMemo(() => {
+    const sorted = [...tasks].sort((a, b) => {
+      if (sortKey === "title") {
+        return a.title.localeCompare(b.title);
+      }
+
+      if (sortKey === "priority") {
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+      }
+
+      if (sortKey === "dueDate") {
+        return (
+          new Date(a.dueDate).getTime() -
+          new Date(b.dueDate).getTime()
+        );
+      }
+
+      return 0;
+    });
+
+    return direction === "asc" ? sorted : sorted.reverse();
+  }, [tasks, sortKey, direction]);
+
+  // ✅ NEW: FILTER LOGIC (Top 1% version)
+  const filteredTasks = useMemo(() => {
+    return sortedTasks.filter((t) =>
+      [t.title, t.assignee, t.priority]
+        .join(" ")
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  }, [sortedTasks, search]);
+
+  const handleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setDirection(direction === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setDirection("asc");
+    }
   };
-  const [sort, setSort] = useState({
-    key: "title",
-    dir: "asc",
-  });
-const sortedTasks = [...tasks].sort((a: any, b: any) => {
-    if (sort.key === "title") {
-      return sort.dir === "asc"
-        ? a.title.localeCompare(b.title)
-        : b.title.localeCompare(a.title);
-    }
 
-    if (sort.key === "priority") {
-      const order = ["Critical", "High", "Medium", "Low"];
-      return sort.dir === "asc"
-        ? order.indexOf(a.priority) - order.indexOf(b.priority)
-        : order.indexOf(b.priority) - order.indexOf(a.priority);
-    }
-
-    if (sort.key === "dueDate") {
-      return sort.dir === "asc"
-        ? new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-        : new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime();
-    }
-
-    return 0;
-  });
-
-  const startIndex = Math.floor(scrollTop / rowHeight);
-  const endIndex = startIndex + visibleCount;
-  const visibleTasks = sortedTasks.slice(startIndex, endIndex);
-
-  // ✅ EMPTY STATE WITH POLISH
-  if (tasks.length === 0) {
+  // 🔥 EMPTY STATE
+  if (filteredTasks.length === 0) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-gray-400 mb-3">🚀 No tasks found</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="
-            px-4 py-2 bg-blue-500 text-white rounded-lg
-            transition-all duration-200
-            hover:bg-blue-600 hover:shadow-md
-            active:scale-95
-          "
-        >
-          Clear Filters
-        </button>
+      <div className="p-6 text-center text-gray-500">
+        No tasks found
       </div>
     );
   }
 
+  // 🔥 VIRTUAL SCROLL (UPDATED to use filteredTasks)
+  const rowHeight = 60;
+  const containerHeight = 500;
+
+  const totalHeight = filteredTasks.length * rowHeight;
+
+  const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - 5);
+  const endIndex = Math.min(
+    filteredTasks.length,
+    Math.ceil((scrollTop + containerHeight) / rowHeight) + 5
+  );
+
+  const visibleTasks = filteredTasks.slice(startIndex, endIndex);
+
   return (
     <div className="p-4">
 
-      {/* 🔥 HEADER + ACTION */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-700">Tasks</h2>
+      {/* ✅ NEW: SEARCH INPUT */}
+      <input
+        type="text"
+        placeholder="Search tasks..."
+        className="border p-2 mb-3 w-full rounded"
+        onChange={(e) => setSearch(e.target.value)}
+      />
 
-        <button
-          className="
-            px-4 py-2 bg-blue-500 text-white rounded-lg
-            transition-all duration-200
-            hover:bg-blue-600 hover:shadow-md
-            active:scale-95
-          "
-        >
-          + Add Task
-        </button>
+      {/* HEADER */}
+      <div className="grid grid-cols-5 items-center p-2 border-b bg-white rounded-xl shadow-sm hover:shadow-md hover:bg-gray-50 transition">
+        <div onClick={() => handleSort("title")} className="cursor-pointer">
+          Title{" "}
+          {sortKey === "title"
+            ? direction === "asc"
+              ? "🔼"
+              : "🔽"
+            : ""}
+        </div>
+
+        <div>Assignee</div>
+
+        <div onClick={() => handleSort("priority")} className="cursor-pointer">
+          Priority{" "}
+          {sortKey === "priority"
+            ? direction === "asc"
+              ? "🔼"
+              : "🔽"
+            : ""}
+        </div>
+
+        <div onClick={() => handleSort("dueDate")} className="cursor-pointer">
+          Due Date{" "}
+          {sortKey === "dueDate"
+            ? direction === "asc"
+              ? "🔼"
+              : "🔽"
+            : ""}
+        </div>
+
+        <div>Status</div>
       </div>
 
-      {/* 🔹 TABLE HEADER */}
-      <div className="grid grid-cols-5 bg-gray-100 border border-gray-200 font-semibold text-gray-700 rounded-t-lg">
-        <div
-          className="p-2 cursor-pointer hover:text-blue-600 transition"
-          onClick={() =>
-            setSort({
-              key: "title",
-              dir: sort.dir === "asc" ? "desc" : "asc",
-            })
-          }
-        >
-          Title
-        </div>
-
-        <div className="p-2">Assignee</div>
-
-        <div
-          className="p-2 cursor-pointer hover:text-blue-600 transition"
-          onClick={() =>
-            setSort({
-              key: "priority",
-              dir: sort.dir === "asc" ? "desc" : "asc",
-            })
-          }
-        >
-          Priority
-        </div>
-
-        <div className="p-2">Status</div>
-
-        <div
-          className="p-2 cursor-pointer hover:text-blue-600 transition"
-          onClick={() =>
-            setSort({
-              key: "dueDate",
-              dir: sort.dir === "asc" ? "desc" : "asc",
-            })
-          }
-        >
-          Due Date
-        </div>
-      </div>
-
-      {/* 🔥 SCROLL CONTAINER */}
+      {/* 🔥 VIRTUAL LIST */}
       <div
-        style={{ height: "400px" }}
-        className="overflow-auto scroll-smooth border-x border-b border-gray-200 rounded-b-lg"
-        onScroll={onScroll}
+        className="h-[500px] overflow-y-auto relative"
+        onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
       >
-        <div
-          style={{ height: sortedTasks.length * rowHeight }}
-          className="relative"
-        >
-          <div
-            style={{
-              transform: `translateY(${startIndex * rowHeight}px)`,
-            }}
-          >
-            {visibleTasks.map((task) => (
+        <div style={{ height: totalHeight, position: "relative" }}>
+          {visibleTasks.map((task, index) => {
+            const actualIndex = startIndex + index;
+
+            const todayDate = new Date();
+            const taskDate = new Date(task.dueDate);
+
+            const isToday =
+              taskDate.toDateString() === todayDate.toDateString();
+
+            const isOverdue = taskDate < todayDate && !isToday;
+
+            const diffDays = Math.floor(
+              (todayDate.getTime() - taskDate.getTime()) /
+                (1000 * 60 * 60 * 24)
+            );
+
+            return (
               <div
                 key={task.id}
-                style={{ height: rowHeight }}
-                className="
-                  grid grid-cols-5 items-center px-3 border-b
-                  hover:bg-gray-50 transition-all duration-200
-                "
+                style={{
+                  position: "absolute",
+                  top: actualIndex * rowHeight,
+                  left: 0,
+                  right: 0,
+                  height: rowHeight,
+                }}
+                className="grid grid-cols-5 items-center p-2 border-b hover:bg-gray-50"
               >
-                <div className="font-medium">{task.title}</div>
+                <div>{task.title}</div>
                 <div>{task.assignee}</div>
-                <div>{task.priority}</div>
 
-                {/* 🔥 POLISHED SELECT */}
                 <div>
-                  <select
-                    value={task.status}
-                    onChange={(e) =>
-                      updateTaskStatus(task.id, e.target.value as any)
-                    }
-                    className="
-                      border border-gray-300 rounded px-2 py-1
-                      transition-all duration-200
-                      hover:border-blue-400
-                      focus:ring-2 focus:ring-blue-200 outline-none
-                    "
+                  <span
+                    className={`px-2 py-1 rounded text-xs ${
+                      task.priority === "Critical"
+                        ? "bg-red-500 text-white"
+                        : task.priority === "High"
+                        ? "bg-orange-400 text-white"
+                        : task.priority === "Medium"
+                        ? "bg-yellow-400"
+                        : "bg-green-400"
+                    }`}
                   >
-                    <option>To Do</option>
-                    <option>In Progress</option>
-                    <option>In Review</option>
-                    <option>Done</option>
-                  </select>
+                    {task.priority}
+                  </span>
                 </div>
 
-                <div className="text-sm text-gray-500">
-                  {task.dueDate}
+                <div
+                  className={
+                    isOverdue
+                      ? "text-red-600 font-semibold"
+                      : isToday
+                      ? "text-blue-600 font-semibold"
+                      : "text-gray-600"
+                  }
+                >
+                  {isToday
+                    ? "Due Today"
+                    : isOverdue
+                    ? `${diffDays} day${diffDays > 1 ? "s" : ""} overdue`
+                    : new Date(task.dueDate).toLocaleDateString()}
                 </div>
+
+                <select
+                  value={task.status}
+                  onChange={(e) =>
+                    onStatusChange(task.id, e.target.value as Status)
+                  }
+                  className="border rounded px-1 py-0.5"
+                >
+                  <option>To Do</option>
+                  <option>In Progress</option>
+                  <option>In Review</option>
+                  <option>Done</option>
+                </select>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </div>
     </div>
   );
 }
+
+export default ListView;
